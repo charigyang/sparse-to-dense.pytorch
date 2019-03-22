@@ -38,6 +38,8 @@ def h5_loader(path):
     depth = np.array(h5f['depth'])
     return rgb, depth
 
+
+
 # def rgb2grayscale(rgb):
 #     return rgb[:,:,0] * 0.2989 + rgb[:,:,1] * 0.587 + rgb[:,:,2] * 0.114
 
@@ -163,3 +165,117 @@ class MyDataloader(data.Dataset):
     #     depth_tensor = depth_tensor.unsqueeze(0)
 
     #     return input_tensor, depth_tensor, input_np, depth_np
+
+def carla_loader(path_image, path_depth):
+    from PIL import Image
+    rgb = Image.open(path_image)
+    depth = Image.open(path_depth)
+    rgb = np.array(rgb)
+    rgb = rgb[:,:,:3]
+    depth = np.array(depth)
+    return rgb, depth
+
+class CarlaDataLoader(data.Dataset):
+    modality_names = ['rgb', 'rgbd', 'd'] # , 'g', 'gd'
+    color_jitter = transforms.ColorJitter(0.4, 0.4, 0.4)
+
+    def __init__(self, root, type, sparsifier=None, modality='rgb', loader=carla_loader):
+        #classes, class_to_idx = find_classes(root)
+        #imgs = make_dataset(root, class_to_idx)
+        imgs, depths = get_images_path(root)
+        assert len(imgs)>0, "Found 0 images in subfolders of: " + root + "\n"
+        print("Found {} images in {} folder.".format(len(imgs), type))
+        self.root = root
+        self.imgs = imgs
+        self.depths = depths
+        #self.classes = classes
+        #self.class_to_idx = class_to_idx
+        if type == 'train':
+            self.transform = self.train_transform
+        elif type == 'val':
+            self.transform = self.val_transform
+        else:
+            raise (RuntimeError("Invalid dataset type: " + type + "\n"
+                                "Supported dataset types are: train, val"))
+        self.loader = loader
+        self.sparsifier = sparsifier
+
+        assert (modality in self.modality_names), "Invalid modality type: " + modality + "\n" + \
+                                "Supported dataset types are: " + ''.join(self.modality_names)
+        self.modality = modality
+
+    def train_transform(self, rgb, depth):
+        raise (RuntimeError("train_transform() is not implemented. "))
+
+    def val_transform(rgb, depth):
+        raise (RuntimeError("val_transform() is not implemented."))
+
+    def create_sparse_depth(self, rgb, depth):
+        if self.sparsifier is None:
+            return depth
+        else:
+            mask_keep = self.sparsifier.dense_to_sparse(rgb, depth)
+            sparse_depth = np.zeros(depth.shape)
+            sparse_depth[mask_keep] = depth[mask_keep]
+            return sparse_depth
+
+    def create_rgbd(self, rgb, depth):
+        sparse_depth = self.create_sparse_depth(rgb, depth)
+        rgbd = np.append(rgb, np.expand_dims(sparse_depth, axis=2), axis=2)
+        return rgbd
+
+    def __getraw__(self, index):
+        """
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: (rgb, depth) the raw data.
+        """
+        path_img = self.imgs[index]
+        path_depth = self.depths[index]
+        rgb, depth = self.loader(path_img, path_depth)
+        return rgb, depth
+
+    def __getitem__(self, index):
+        rgb, depth = self.__getraw__(index)
+        if self.transform is not None:
+            rgb_np, depth_np = self.transform(rgb, depth)
+        else:
+            raise(RuntimeError("transform not defined"))
+
+        # color normalization
+        # rgb_tensor = normalize_rgb(rgb_tensor)
+        # rgb_np = normalize_np(rgb_np)
+
+        if self.modality == 'rgb':
+            input_np = rgb_np
+        elif self.modality == 'rgbd':
+            input_np = self.create_rgbd(rgb_np, depth_np)
+        elif self.modality == 'd':
+            input_np = self.create_sparse_depth(rgb_np, depth_np)
+
+        input_tensor = to_tensor(input_np)
+        while input_tensor.dim() < 3:
+            input_tensor = input_tensor.unsqueeze(0)
+        depth_tensor = to_tensor(depth_np)
+        depth_tensor = depth_tensor.unsqueeze(0)
+
+        return input_tensor, depth_tensor
+
+    def __len__(self):
+        return len(self.imgs)
+
+def get_images_path(root):
+    subfolders = [f.path for f in os.scandir(root) if f.is_dir() ]
+    Depths = []
+    Images = []
+    for subfolder in subfolders:
+        depths = [f.path for f in os.scandir(subfolder) if str(f).startswith('<DirEntry \'d')]
+        images = [f.path for f in os.scandir(subfolder) if str(f).startswith('<DirEntry \'i')]
+        Depths += depths
+        Images += images
+    Depths = sorted(Depths)
+    Images = sorted(Images)
+    return Images, Depths
+

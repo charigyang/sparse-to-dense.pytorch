@@ -55,6 +55,16 @@ def create_data_loaders(args):
         val_dataset = KITTIDataset(valdir, type='val',
             modality=args.modality, sparsifier=sparsifier)
 
+    elif args.data == 'carla':
+        from dataloaders.carla_dataloader import CarlaDataset
+        #traindir = Path('???')
+        #valdir = Path('???')
+        if not args.evaluate:
+            train_dataset = CarlaDataset(traindir, type='train',
+                modality=args.modality, sparsifier=sparsifier)
+        val_dataset = CarlaDataset(valdir, type='val',
+            modality=args.modality, sparsifier=sparsifier)
+
     else:
         raise RuntimeError('Dataset not found.' +
                            'The dataset must be either of nyudepthv2 or kitti.')
@@ -127,8 +137,8 @@ def main():
         optimizer = torch.optim.SGD(model.parameters(), args.lr, \
             momentum=args.momentum, weight_decay=args.weight_decay)
 
-        # model = torch.nn.DataParallel(model).cuda() # for multi-gpu training
-        model = model.cuda()
+        model = torch.nn.DataParallel(model).cuda() # for multi-gpu training
+        # model = model.cuda()
 
     # define loss function (criterion) and optimizer
     if args.criterion == 'l2':
