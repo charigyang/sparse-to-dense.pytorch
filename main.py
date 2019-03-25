@@ -57,8 +57,6 @@ def create_data_loaders(args):
 
     elif args.data == 'carla':
         from dataloaders.carla_dataloader import CarlaDataset
-        #traindir = Path('???')
-        #valdir = Path('???')
         if not args.evaluate:
             train_dataset = CarlaDataset(traindir, type='train',
                 modality=args.modality, sparsifier=sparsifier)

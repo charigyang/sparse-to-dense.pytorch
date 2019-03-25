@@ -172,7 +172,11 @@ def carla_loader(path_image, path_depth):
     depth = Image.open(path_depth)
     rgb = np.array(rgb)
     rgb = rgb[:,:,:3]
-    depth = np.array(depth)
+
+    #convert to meters!!!
+    depth = np.array(depth)/255
+    depth = np.exp(depth)
+    depth = depth/np.max(depth)*1000
     return rgb, depth
 
 class CarlaDataLoader(data.Dataset):
