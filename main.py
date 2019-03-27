@@ -13,6 +13,7 @@ from metrics import AverageMeter, Result
 from dataloaders.dense_to_sparse import UniformSampling, SimulatedStereo
 import criteria
 import utils
+from tensorboardX import SummaryWriter
 
 args = utils.parse_command()
 print(args)
@@ -148,6 +149,9 @@ def main():
     output_directory = utils.get_output_directory(args)
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
+    #logging on tensorboard
+    global tbwriter
+    tbwriter = SummaryWriter('tensorboard')
     train_csv = os.path.join(output_directory, 'train.csv')
     test_csv = os.path.join(output_directory, 'test.csv')
     best_txt = os.path.join(output_directory, 'best.txt')
@@ -185,8 +189,7 @@ def main():
             'best_result': best_result,
             'optimizer' : optimizer,
         }, is_best, epoch, output_directory)
-
-
+        
 def train(train_loader, model, criterion, optimizer, epoch):
     average_meter = AverageMeter()
     model.train() # switch to train mode
@@ -232,7 +235,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         writer.writerow({'mse': avg.mse, 'rmse': avg.rmse, 'absrel': avg.absrel, 'lg10': avg.lg10,
             'mae': avg.mae, 'delta1': avg.delta1, 'delta2': avg.delta2, 'delta3': avg.delta3,
             'gpu_time': avg.gpu_time, 'data_time': avg.data_time})
-
+    tbwriter.add_scalar('rmse_train', avg.rmse, epoch)
 
 def validate(val_loader, model, epoch, write_to_file=True):
     average_meter = AverageMeter()
@@ -309,6 +312,7 @@ def validate(val_loader, model, epoch, write_to_file=True):
             writer.writerow({'mse': avg.mse, 'rmse': avg.rmse, 'absrel': avg.absrel, 'lg10': avg.lg10,
                 'mae': avg.mae, 'delta1': avg.delta1, 'delta2': avg.delta2, 'delta3': avg.delta3,
                 'data_time': avg.data_time, 'gpu_time': avg.gpu_time})
+    tbwriter.add_scalar('rmse_val', avg.rmse, epoch)
     return avg, img_merge
 
 if __name__ == '__main__':
