@@ -13,7 +13,7 @@ from metrics import AverageMeter, Result
 from dataloaders.dense_to_sparse import UniformSampling, SimulatedStereo
 import criteria
 import utils
-from tensorboardX import SummaryWriter
+from tensorboardX import SummaryWriter #tensorboard --logdir=tensorboard & 
 
 args = utils.parse_command()
 print(args)
