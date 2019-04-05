@@ -236,6 +236,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
             'mae': avg.mae, 'delta1': avg.delta1, 'delta2': avg.delta2, 'delta3': avg.delta3,
             'gpu_time': avg.gpu_time, 'data_time': avg.data_time})
     tbwriter.add_scalar('rmse_train', avg.rmse, epoch)
+    tbwriter.add_scalar('absrel_train', avg.absrel, epoch)
+    tbwriter.add_scalar('delta1_train' ,avg.delta1, epoch)
+    tbwriter.add_scalar('delta2_train' ,avg.delta2, epoch)
+    tbwriter.add_scalar('delta3_train' ,avg.delta3, epoch)
 
 def validate(val_loader, model, epoch, write_to_file=True):
     average_meter = AverageMeter()
@@ -313,6 +317,10 @@ def validate(val_loader, model, epoch, write_to_file=True):
                 'mae': avg.mae, 'delta1': avg.delta1, 'delta2': avg.delta2, 'delta3': avg.delta3,
                 'data_time': avg.data_time, 'gpu_time': avg.gpu_time})
     tbwriter.add_scalar('rmse_val', avg.rmse, epoch)
+    tbwriter.add_scalar('absrel_val', avg.absrel, epoch)
+    tbwriter.add_scalar('delta1_val' ,avg.delta1, epoch)
+    tbwriter.add_scalar('delta2_val' ,avg.delta2, epoch)
+    tbwriter.add_scalar('delta3_val' ,avg.delta3, epoch)
     return avg, img_merge
 
 if __name__ == '__main__':
